@@ -1,0 +1,22 @@
+# секреты — никогда
+.env
+*.key
+token.txt
+zai_key.txt
+
+# модели весят гигабайты
+models/*.gguf
+models/*.bin
+
+# изменяемое состояние
+data/
+*.log
+history.json
+offset.txt
+
+# мусор
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store

@@ -1,0 +1,60 @@
+# Петрович — персонаж в Telegram.
+# Поднимается одной командой:  docker compose up -d --build
+# Перед первым запуском:  cp .env.example .env  и вписать TG_TOKEN.
+name: petrovich
+
+services:
+
+  # ── локальная модель: мозг для BRAIN=local + fallback, если облако упало ──
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: petrovich-llama
+    restart: unless-stopped
+    volumes:
+      - ./models:/models:ro
+    command:
+      - -m
+      - /models/${LOCAL_MODEL_FILE:-Qwen3-4B-Instruct-2507-Q4_K_M.gguf}
+      - -c
+      - "${CTX:-4096}"
+      - -t
+      - "${THREADS:-4}"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+
+  # ── классификатор спама: отдельный инстанс, чтобы не зависеть от модели выше ──
+  classifier:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: petrovich-classifier
+    restart: unless-stopped
+    volumes:
+      - ./models:/models:ro
+    command:
+      - -m
+      - /models/${CLASSIFIER_MODEL_FILE:-Qwen3-4B-Instruct-2507-Q4_K_M.gguf}
+      - -c
+      - "1024"
+      - -t
+      - "2"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+
+  # ── сам Петрович ──
+  bot:
+    build: ./bot
+    container_name: petrovich-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      LLAMA_URL: http://llama:8080/v1/chat/completions
+      CLASSIFIER_URL: http://classifier:8080/v1/chat/completions
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    depends_on:
+      - llama
+      - classifier
