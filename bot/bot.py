@@ -29,6 +29,7 @@ LOCAL_MODEL = env("LOCAL_MODEL", "local")
 CLASSIFIER = env("CLASSIFIER_URL", "http://classifier:8080/v1/chat/completions")
 
 BOT_USERNAME = env("BOT_USERNAME", "").strip().lstrip("@")
+KNOWN_PEOPLE = env("KNOWN_PEOPLE", "").strip()
 KEYWORDS = [k.strip().lower() for k in env("KEYWORDS", "петрович,алкаш").split(",") if k.strip()]
 SPAM_REPLY = env("SPAM_REPLY", "ненавижу эту ебучую рекламу")
 SPAM_COOLDOWN = int(env("SPAM_COOLDOWN", "60"))
@@ -356,6 +357,11 @@ def ask(chat_id, user_text):
     msgs = hist.get(str(chat_id), [])
     msgs.append({"role": "user", "content": user_text})
     system = open(PERSONA, encoding="utf-8").read().strip()
+    if KNOWN_PEOPLE:
+        system += ("\n\nЛЮДИ В ЧАТЕ: %s — живые люди из этого чата. Ты знаешь о них ТОЛЬКО имя. "
+                   "Ничего о них не придумывай: ни характера, ни занятий, ни оценок. "
+                   "Не хами им и не подлизывайся. Не ищи их в интернете. "
+                   "Спросят «помнишь такого-то?» — коротко: «Знаю, из чата», и всё." % KNOWN_PEOPLE)
     now = datetime.now(TZ)
     system += "\n\nСЕЙЧАС: %s, %s, %s (UTC+2). Это точная дата — не выдумывай другую." % (
         now.strftime("%d.%m.%Y"), WEEKDAYS[now.weekday()], now.strftime("%H:%M"))
@@ -524,6 +530,7 @@ def check():
     print("  ZAI_MODEL         %s" % ZAI_MODEL)
     print("  BOT_USERNAME      %s" % (BOT_USERNAME or "(пусто — в группе будет отвечать только по KEYWORDS)"))
     print("  KEYWORDS          %s" % ", ".join(KEYWORDS))
+    print("  KNOWN_PEOPLE      %s" % (KNOWN_PEOPLE or "(пусто)"))
     print("  DATA_DIR          %s" % DATA)
     print("  PERSONA           %s (%d симв.)" % (PERSONA, len(open(PERSONA, encoding="utf-8").read()) if os.path.exists(PERSONA) else 0))
     print("  TZ_OFFSET         UTC+%s" % (TZ.utcoffset(None).total_seconds() / 3600))
